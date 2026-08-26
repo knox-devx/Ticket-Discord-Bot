@@ -1,0 +1,22 @@
+# Segredos locais
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+
+# Dados gerados em execução
+# Mantemos a pasta no Git pelo data/.gitkeep, mas não os dados reais.
+data/configs.json
+data/tickets.json
+
+# IDE / sistema
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
