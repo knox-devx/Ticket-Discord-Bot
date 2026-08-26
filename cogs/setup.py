@@ -22,37 +22,20 @@ CATEGORY_EMOJIS = {
 class SetupModal(discord.ui.Modal, title="Configuração do painel de tickets"):
     """Modal principal usado pelo /setup para definir o painel."""
 
-    titulo = discord.ui.TextInput(
-        label="Título do painel",
-        default="Central de Suporte",
-        max_length=100,
-    )
+    titulo = discord.ui.TextInput(label="Título do painel", default="Central de Suporte", max_length=100)
     descricao = discord.ui.TextInput(
-        label="Descrição do painel",
-        default="Escolha uma categoria abaixo para abrir um ticket.",
-        style=discord.TextStyle.paragraph,
-        max_length=500,
+        label="Descrição do painel", default="Escolha uma categoria abaixo para abrir um ticket.",
+        style=discord.TextStyle.paragraph, max_length=500,
     )
-    limite = discord.ui.TextInput(
-        label="Limite de tickets por usuário",
-        default="3",
-        max_length=2,
-    )
+    limite = discord.ui.TextInput(label="Limite de tickets por usuário", default="3", max_length=2)
     categorias = discord.ui.TextInput(
         label="Categorias (separe com |)",
         default="Suporte Geral | Resgatar Sorteio | Reportar Bug | Outro",
-        style=discord.TextStyle.paragraph,
-        max_length=500,
+        style=discord.TextStyle.paragraph, max_length=500,
     )
 
-    def __init__(
-        self,
-        bot: commands.Bot,
-        support_role: discord.Role,
-        panel_channel: discord.TextChannel,
-        ticket_category: discord.CategoryChannel,
-        log_channel: discord.TextChannel | None,
-    ) -> None:
+    def __init__(self, bot: commands.Bot, support_role: discord.Role, panel_channel: discord.TextChannel,
+                 ticket_category: discord.CategoryChannel, log_channel: discord.TextChannel | None) -> None:
         super().__init__()
         self.bot = bot
         self.support_role = support_role
@@ -66,14 +49,11 @@ class SetupModal(discord.ui.Modal, title="Configuração do painel de tickets"):
         except ValueError:
             ticket_limit = 3
 
-        categories = [
-            item.strip()
-            for item in str(self.categorias.value).split("|")
-            if item.strip()
-        ][:10]
+        categories = [item.strip() for item in str(self.categorias.value).split("|") if item.strip()][:10]
         if not categories:
             categories = DEFAULT_CATEGORIES[:]
 
+        previous_config = get_config(interaction.guild.id) or {}
         config = {
             "support_role_id": str(self.support_role.id),
             "panel_channel_id": str(self.panel_channel.id),
@@ -83,19 +63,17 @@ class SetupModal(discord.ui.Modal, title="Configuração do painel de tickets"):
             "panel_title": str(self.titulo.value),
             "panel_description": str(self.descricao.value),
             "active_categories": categories,
+            # Mantém instruções já configuradas pelo /setform.
+            "forms": previous_config.get("forms", {}),
         }
         set_config(interaction.guild.id, config)
 
         # Importação tardia evita dependência circular entre os cogs.
         from cogs.tickets import TicketPanelView, build_panel_embed
 
-        view = TicketPanelView(categories)
-        embed = build_panel_embed(interaction.guild, config)
-        await self.panel_channel.send(embed=embed, view=view)
-
+        await self.panel_channel.send(embed=build_panel_embed(interaction.guild, config), view=TicketPanelView(categories))
         await interaction.response.send_message(
-            f"{emoji('success')} Painel enviado em {self.panel_channel.mention} e configuração salva.",
-            ephemeral=True,
+            f"{emoji('success')} Painel enviado em {self.panel_channel.mention} e configuração salva.", ephemeral=True
         )
 
 
@@ -113,88 +91,47 @@ class SetupCog(commands.Cog):
         categoria_tickets="Categoria onde os canais de ticket serão criados",
         canal_logs="Canal opcional para registrar eventos",
     )
-    async def setup(
-        self,
-        interaction: discord.Interaction,
-        cargo_suporte: discord.Role,
-        canal_painel: discord.TextChannel,
-        categoria_tickets: discord.CategoryChannel,
-        canal_logs: discord.TextChannel | None = None,
-    ) -> None:
-        modal = SetupModal(
-            self.bot,
-            cargo_suporte,
-            canal_painel,
-            categoria_tickets,
-            canal_logs,
+    async def setup(self, interaction: discord.Interaction, cargo_suporte: discord.Role,
+                    canal_painel: discord.TextChannel, categoria_tickets: discord.CategoryChannel,
+                    canal_logs: discord.TextChannel | None = None) -> None:
+        await interaction.response.send_modal(
+            SetupModal(self.bot, cargo_suporte, canal_painel, categoria_tickets, canal_logs)
         )
-        await interaction.response.send_modal(modal)
 
     @app_commands.command(name="panel2", description="Reenvie o painel de tickets configurado")
     @app_commands.default_permissions(administrator=True)
     async def panel2(self, interaction: discord.Interaction) -> None:
         config = get_config(interaction.guild.id)
         if not config:
-            await interaction.response.send_message(
-                f"{emoji('warn')} Execute `/setup` primeiro.",
-                ephemeral=True,
-            )
+            await interaction.response.send_message(f"{emoji('warn')} Execute `/setup` primeiro.", ephemeral=True)
             return
-
         channel = interaction.guild.get_channel(int(config["panel_channel_id"]))
         if not isinstance(channel, discord.TextChannel):
-            await interaction.response.send_message(
-                f"{emoji('warn')} O canal configurado não existe mais.",
-                ephemeral=True,
-            )
+            await interaction.response.send_message(f"{emoji('warn')} O canal configurado não existe mais.", ephemeral=True)
             return
-
         from cogs.tickets import TicketPanelView, build_panel_embed
-
         categories = config.get("active_categories", DEFAULT_CATEGORIES)
-        await channel.send(
-            embed=build_panel_embed(interaction.guild, config),
-            view=TicketPanelView(categories),
-        )
-        await interaction.response.send_message(
-            f"{emoji('success')} Painel reenviado em {channel.mention}.",
-            ephemeral=True,
-        )
+        await channel.send(embed=build_panel_embed(interaction.guild, config), view=TicketPanelView(categories))
+        await interaction.response.send_message(f"{emoji('success')} Painel reenviado em {channel.mention}.", ephemeral=True)
 
     @app_commands.command(name="setupinfo", description="Veja a configuração atual do sistema de tickets")
     @app_commands.default_permissions(administrator=True)
     async def setupinfo(self, interaction: discord.Interaction) -> None:
         config = get_config(interaction.guild.id)
         if not config:
-            await interaction.response.send_message(
-                f"{emoji('warn')} Nenhuma configuração foi salva ainda.",
-                ephemeral=True,
-            )
+            await interaction.response.send_message(f"{emoji('warn')} Nenhuma configuração foi salva ainda.", ephemeral=True)
             return
-
         role = interaction.guild.get_role(int(config["support_role_id"]))
         panel = interaction.guild.get_channel(int(config["panel_channel_id"]))
         category = interaction.guild.get_channel(int(config["ticket_category_id"]))
-        log_channel = (
-            interaction.guild.get_channel(int(config["log_channel_id"]))
-            if config.get("log_channel_id")
-            else None
-        )
-
-        embed = discord.Embed(
-            title=f"{emoji('settings')} Configuração do {BOT_NAME}",
-            color=discord.Color.blurple(),
-        )
+        log_channel = interaction.guild.get_channel(int(config["log_channel_id"])) if config.get("log_channel_id") else None
+        embed = discord.Embed(title=f"{emoji('settings')} Configuração do {BOT_NAME}", color=discord.Color.blurple())
         embed.add_field(name="Cargo de suporte", value=role.mention if role else "Não encontrado", inline=False)
         embed.add_field(name="Canal do painel", value=panel.mention if panel else "Não encontrado", inline=False)
         embed.add_field(name="Categoria", value=category.name if category else "Não encontrada", inline=False)
         embed.add_field(name="Logs", value=log_channel.mention if log_channel else "Desativado", inline=False)
         embed.add_field(name="Limite", value=str(config.get("ticket_limit", 3)), inline=True)
-        embed.add_field(
-            name="Categorias",
-            value="\n".join(f"• {item}" for item in config.get("active_categories", DEFAULT_CATEGORIES)),
-            inline=False,
-        )
+        embed.add_field(name="Categorias", value="\n".join(f"• {item}" for item in config.get("active_categories", DEFAULT_CATEGORIES)), inline=False)
         embed.set_footer(text=f"{BOT_NAME} • Knox Dev")
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
