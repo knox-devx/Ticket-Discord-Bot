@@ -1,10 +1,10 @@
 <div align="center">
 
-<img width="100%" src="https://capsule-render.vercel.app/api?type=waving&height=220&color=0:111827,50:0f172a,100:312e81&text=Ticket%20Discord%20Bot&fontColor=ffffff&fontSize=48&fontAlignY=38&desc=Python%20%7C%20Components%20V2%20%7C%20Auto%20Emoji%20Sync&descAlignY=60&animation=fadeIn" alt="Ticket Discord Bot banner" />
+<img width="100%" src="https://capsule-render.vercel.app/api?type=waving&height=220&color=0:111827,50:0f172a,100:312e81&text=Ticket%20Discord%20Bot&fontColor=ffffff&fontSize=48&fontAlignY=38&desc=Python%20%7C%20discord.py%20%7C%20Auto%20Emoji%20Sync&descAlignY=60&animation=fadeIn" alt="Ticket Discord Bot" />
 
 # 𝑻𝒊𝒄𝒌𝒆𝒕 𝑫𝒊𝒔𝒄𝒐𝒓𝒅 𝑩𝒐𝒕
 
-### Sistema moderno de tickets para Discord, configurável e pronto para hospedar.
+### Sistema moderno, leve e configurável de tickets para Discord.
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![discord.py](https://img.shields.io/badge/discord.py-2.7%2B-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discordpy.readthedocs.io/)
@@ -17,76 +17,80 @@
 
 ---
 
-## ✨ Visão geral
+## ✨ Sobre
 
-Este projeto é um bot de tickets feito em **Python** com **discord.py** e **Discord Components V2**. Ele possui painéis interativos, formulários configuráveis, transcripts HTML, logs, tickets persistentes e um sistema que sincroniza automaticamente emojis com a própria aplicação do bot.
+Bot de tickets em **Python + discord.py**, com painel persistente, categorias personalizáveis, claim, fechamento, reabertura, exclusão, logs, transcripts HTML, limite por usuário e sincronização automática dos emojis da própria aplicação Discord.
 
-O nome exibido pelo sistema **não fica preso no código**. Basta definir `BOT_NAME` no `.env`; textos de ajuda e referências ao nome do bot usam esse valor.
+O nome do bot fica centralizado no `.env`:
+
+```env
+BOT_NAME=Knox Tickets
+```
+
+Sempre que o sistema precisa citar o nome do bot em ajuda, rodapé ou configuração, ele usa esse valor.
 
 > [!IMPORTANT]
-> O arquivo `.env` real nunca deve ser enviado ao GitHub. Este repositório inclui somente `.env.example`.
+> O `.env` real não é enviado ao GitHub. Use `.env.example` como modelo.
 
 ## 🚀 Recursos
 
-- 🎫 Painel de tickets com botões.
-- 📋 Painel alternativo em formato dropdown.
-- 🧩 Components V2 em mensagens e controles.
-- 📝 Formulários de ticket com múltiplas etapas.
-- 👤 Sistema de assumir ticket.
-- 🔒 Fechar, reabrir e excluir tickets.
-- 📄 Transcript HTML do atendimento.
-- 🧾 Canal de logs configurável.
-- 🛡️ Limite de tickets por usuário.
-- 💾 Persistência leve usando JSON.
-- 🔁 Views persistentes para botões importantes.
-- 🏷️ Nome configurável com `BOT_NAME`.
-- 😀 **Sincronização automática de emojis do aplicativo**.
-- ♻️ Nova verificação de emojis em segundo plano, sem reiniciar o processo.
-- 🇧🇷 Código, comentários e documentação adaptados para português.
+- 🎫 Painel persistente de abertura de tickets por categoria
+- 🛠️ `/setup` com cargo de suporte, canal do painel, categoria, logs, limite e categorias
+- 👤 Botão para **assumir** atendimento
+- 🔒 Fechar e 🔓 reabrir tickets
+- 🗑️ Exclusão com transcript por DM quando possível
+- 📄 Transcript HTML com conteúdo escapado por segurança
+- 🧾 Logs de abertura, fechamento e exclusão
+- 🛡️ Limite de tickets simultâneos por usuário
+- ➕ `/add` e `/remove` para controlar acesso ao ticket
+- 📝 `/setform` para definir instruções específicas de cada categoria
+- 💾 Persistência leve em JSON
+- 🏷️ Nome configurável via `BOT_NAME`
+- 😀 Sincronização automática de **Application Emojis**
+- ♻️ Verificação periódica dos emojis sem precisar reiniciar o processo
+- 🇧🇷 Código, comentários e documentação em português
 
 ---
 
-## 😀 Sincronização automática de emojis
+## 😀 Emojis automáticos
 
-O projeto contém uma lista dos emojis fornecidos para esta versão. Durante a inicialização, o bot:
+O arquivo [`utils/emojis.py`](./utils/emojis.py) contém os emojis fornecidos para esta versão. Ao ficar online, o bot:
 
-1. consulta os emojis que já pertencem à própria aplicação;
-2. identifica quais estão faltando;
-3. obtém a imagem original pelo CDN oficial do Discord;
-4. cria o emoji diretamente na aplicação usando a API do Discord;
-5. salva os IDs atuais em memória;
-6. passa a usar os novos IDs nas mensagens e componentes;
-7. repete a verificação automaticamente a cada **5 minutos**.
+1. lista os emojis existentes na própria aplicação Discord;
+2. compara pelos nomes;
+3. baixa pelo CDN oficial a imagem dos emojis que estiverem faltando;
+4. cria os emojis na aplicação pela API do Discord usando o token do próprio bot;
+5. atualiza os IDs usados em memória;
+6. repete a verificação automaticamente a cada **5 minutos**;
+7. respeita `429` e o `retry_after` informado pelo Discord.
 
-Se um emoji for removido da aplicação enquanto o bot estiver online, a próxima sincronização tenta criá-lo novamente. Não é necessário reiniciar o bot apenas para atualizar o mapa de IDs.
+Se a primeira sincronização falhar por indisponibilidade temporária, o bot continua funcionando com os IDs de origem como fallback e tenta novamente depois.
 
-Os emojis configurados podem ser vistos em [`utils/emojis.py`](./utils/emojis.py).
+> [!NOTE]
+> Mensagens antigas já enviadas pelo Discord não são reescritas automaticamente. Novos painéis e novos componentes passam a usar o mapa de IDs atualizado.
 
 ---
 
-## ⚙️ Configuração
+## ⚙️ `.env`
 
-Crie seu `.env` com base em `.env.example`:
+Copie `.env.example` para `.env`:
 
 ```env
 TOKEN=SEU_TOKEN_DO_BOT
 BOT_NAME=Knox Tickets
 ```
 
-| Variável | Obrigatória | Função |
+| Variável | Obrigatória | Descrição |
 |---|:---:|---|
 | `TOKEN` | ✅ | Token do bot no Discord Developer Portal |
-| `BOT_NAME` | ❌ | Nome exibido pelo bot; padrão: `Knox Tickets` |
+| `BOT_NAME` | ❌ | Nome usado pelo sistema; padrão: `Knox Tickets` |
 
-### Intents necessários
+### Intents
 
 No **Discord Developer Portal → Bot**, ative:
 
 - **Server Members Intent**
 - **Message Content Intent**
-
-> [!NOTE]
-> A sincronização de **Application Emojis** é feita com o próprio token do bot pela API oficial do Discord.
 
 ---
 
@@ -116,37 +120,33 @@ python main.py
 
 ---
 
-## 🧭 Comandos principais
+## 🧭 Comandos
 
-| Comando | Função | Permissão |
+| Comando | Função | Permissão padrão |
 |---|---|---|
-| `/setup` | Abre o assistente de configuração do painel | Administrador |
-| `/setup2` | Configura o painel dropdown | Administrador |
-| `/panel2` | Envia o painel dropdown já configurado | Administrador |
-| `/setform` | Configura formulário em etapas por categoria | Administrador |
-| `/close` | Fecha o ticket atual | Ticket/equipe |
-| `/add` | Adiciona um membro ao ticket | Ticket/equipe |
-| `/remove` | Remove um membro do ticket | Ticket/equipe |
-| `/transcript` | Gera o transcript HTML | Ticket/equipe |
-| `/ticketinfo` | Exibe informações do ticket | Ticket/equipe |
-| `/help` | Exibe a central de ajuda | Todos |
+| `/setup` | Configura e envia o painel | Administrador |
+| `/panel2` | Reenvia o painel salvo | Administrador |
+| `/setupinfo` | Mostra a configuração atual | Administrador |
+| `/setform` | Define instruções para uma categoria | Administrador |
+| `/close` | Fecha o ticket atual | Usuário com acesso |
+| `/add` | Adiciona um membro ao ticket | Usuário com acesso |
+| `/remove` | Remove um membro do ticket | Usuário com acesso |
+| `/transcript` | Gera o transcript HTML | Usuário com acesso |
+| `/ticketinfo` | Mostra dados do ticket | Usuário com acesso |
+| `/help` | Exibe ajuda | Todos |
 
 ---
 
-## 🗂️ Estrutura do projeto
+## 🗂️ Estrutura
 
 ```text
 Ticket-Discord-Bot/
-├── .github/
-│   └── workflows/
-│       └── ci.yml
+├── .github/workflows/ci.yml
 ├── cogs/
 │   ├── setup.py
 │   └── tickets.py
-├── data/
-│   └── .gitkeep
-├── docs/
-│   └── EMOJIS.md
+├── data/.gitkeep
+├── docs/EMOJIS.md
 ├── utils/
 │   ├── config.py
 │   ├── emojis.py
@@ -160,8 +160,6 @@ Ticket-Discord-Bot/
 ├── main.py
 └── requirements.txt
 ```
-
----
 
 ## 🧠 Arquitetura
 
@@ -182,26 +180,25 @@ flowchart TD
 
 ## 🔐 Segurança
 
-- `.env` está no `.gitignore`.
-- O token não deve aparecer em commits, screenshots ou logs públicos.
-- Dados reais de `data/configs.json` e `data/tickets.json` não são versionados.
-- O transcript escapa conteúdo HTML antes de gerar o arquivo.
+- `.env` ignorado pelo Git
+- dados reais de tickets/configurações não são versionados
+- token não aparece no código
+- transcripts escapam HTML de mensagens, nomes e anexos
+- sincronizador trata rate limits do Discord
 
----
+## ✅ Validação automática
 
-## 🛠️ Desenvolvimento
-
-Para verificar rapidamente se os arquivos Python estão com sintaxe válida:
+O workflow em `.github/workflows/ci.yml` instala as dependências e executa:
 
 ```bash
 python -m compileall -q main.py cogs utils
 ```
 
-O repositório também inclui um workflow de **GitHub Actions** que instala as dependências e executa essa validação automaticamente em pushes e pull requests.
+em pushes e pull requests.
 
 ---
 
-## 📜 Créditos e licença
+## 📜 Créditos
 
 <div align="center">
 
@@ -209,11 +206,9 @@ O repositório também inclui um workflow de **GitHub Actions** que instala as d
 
 **Manutenção, adaptação, localização e evolução desta versão**
 
-[GitHub](https://github.com/knox-devx)
-
 </div>
 
-O código-base recebido para esta adaptação contém um aviso MIT do autor original. Esse aviso permanece preservado em [`LICENSE`](./LICENSE), como exigido pela licença. Os detalhes da adaptação atual estão em [`NOTICE.md`](./NOTICE.md).
+O código-base recebido veio com uma licença MIT e atribuição do autor original. O aviso original foi preservado em [`LICENSE`](./LICENSE), e a atribuição desta versão está detalhada em [`NOTICE.md`](./NOTICE.md).
 
 ---
 
@@ -221,6 +216,6 @@ O código-base recebido para esta adaptação contém um aviso MIT do autor orig
 
 <img width="100%" src="https://capsule-render.vercel.app/api?type=waving&height=110&section=footer&color=0:312e81,100:111827" alt="Footer" />
 
-**Feito para Discord • Python • Knox Dev**
+**Discord • Python • Knox Dev**
 
 </div>
